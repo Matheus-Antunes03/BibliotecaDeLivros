@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca de Livros</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .atualizar-livro {
+            display: none;
+            margin-top: 20px;
+        }
+        .adicionar-livro {
+            display: none;
+            margin-top: 20px;
+        }
+        hr {
+            margin: 20px 0;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Biblioteca de Livros 📚</h1>
+
+        <div>
+            <h2>📖 Livros Cadastrados</h2>
+            <ul id="livros-lista"></ul>
+        </div>
+
+        <div class="atualizar-livro">
+            <h2>🔄 Atualizar Livro</h2>
+            <input type="hidden" id="livroId" placeholder="ID do Livro">
+            <input type="text" id="novoTitulo" placeholder="Novo Título">
+            <input type="text" id="novoAutor" placeholder="Novo Autor">
+            <input type="number" id="novoAno" placeholder="Novo Ano de Publicação">
+            <input type="text" id="novaImagem" placeholder="Nova URL da Imagem da Capa">
+            <button onclick="atualizarLivro()">Atualizar</button>
+            <button onclick="fecharEdicao()">Fechar</button>
+        </div>
+
+        <div>
+            <button onclick="mostrarCamposAdicionar()">Adicionar Livro</button>
+            <div class="adicionar-livro" style="display: none;">
+                <input type="text" id="titulo" placeholder="Título">
+                <input type="text" id="autor" placeholder="Autor">
+                <input type="number" id="ano" placeholder="Ano de Publicação">
+                <input type="text" id="imagem" placeholder="URL da Imagem da Capa">
+                <button onclick="adicionarLivro()">Adicionar</button>
+                <button onclick="cancelarAdicionar()">Fechar</button>
+            </div>
+        </div>
+        <hr id="divisoria">
+        <div class="footer">
+            <p>Biblioteca - Gerenciamento de Livros</p>
+        </div>
+    </div>
+
+    <script>
+        const apiUrl = 'http://127.0.0.1:5000/livros';
+
+        async function listarLivros() {
+            const response = await fetch(apiUrl);
+            const livros = await response.json();
+            const lista = document.getElementById('livros-lista');
+            lista.innerHTML = '';
+
+            livros.forEach(livro => {
+                const item = document.createElement('li');
+                item.classList.add('livro-item');
+
+                const info = document.createElement('div');
+                info.classList.add('livro-info');
+                
+                if (livro.imagem) {
+                    const img = document.createElement('img');
+                    img.src = livro.imagem;
+                    img.alt = 'Capa do Livro';
+                    info.appendChild(img);
+                }
+
+                info.appendChild(document.createTextNode(`${livro.titulo} - ${livro.autor} (${livro.ano_de_publicacao})`));
+
+                const botoes = document.createElement('div');
+                botoes.classList.add('livro-botoes');
+
+                const editButton = document.createElement('button');
+                editButton.textContent = '✏️';
+                editButton.onclick = () => preencherFormulario(livro);
+                
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = '🗑️';
+                deleteButton.onclick = () => excluirLivro(livro.id);
+
+                botoes.appendChild(editButton);
+                botoes.appendChild(deleteButton);
+                item.appendChild(info);
+                item.appendChild(botoes);
+                lista.appendChild(item);
+            });
+        }
+
+        function mostrarCamposAdicionar() {
+            document.querySelector('.adicionar-livro').style.display = 'block';
+            document.querySelector('button[onclick="mostrarCamposAdicionar()"]').style.display = 'none';
+        }
+
+        function cancelarAdicionar() {
+            document.querySelector('.adicionar-livro').style.display = 'none';
+            document.querySelector('button[onclick="mostrarCamposAdicionar()"]').style.display = 'block';
+            limparCamposAdicionar();
+        }
+
+        function limparCamposAdicionar() {
+            document.getElementById('titulo').value = '';
+            document.getElementById('autor').value = '';
+            document.getElementById('ano').value = '';
+            document.getElementById('imagem').value = '';
+        }
+
+        function preencherFormulario(livro) {
+            document.getElementById('livroId').value = livro.id;
+            document.getElementById('novoTitulo').value = livro.titulo;
+            document.getElementById('novoAutor').value = livro.autor;
+            document.getElementById('novoAno').value = livro.ano_de_publicacao;
+            document.getElementById('novaImagem').value = livro.imagem;
+
+            document.querySelector('.atualizar-livro').style.display = 'block';
+        }
+
+        async function adicionarLivro() {
+            const titulo = document.getElementById('titulo').value;
+            const autor = document.getElementById('autor').value;
+            const ano = document.getElementById('ano').value;
+            const imagem = document.getElementById('imagem').value;
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ titulo, autor, ano_de_publicacao: parseInt(ano), imagem })
+            });
+
+            if (response.ok) {
+                listarLivros();
+                cancelarAdicionar();
+            } else {
+                console.error('Erro ao adicionar livro');
+            }
+        }
+
+        async function atualizarLivro() {
+            const id = document.getElementById('livroId').value;
+            const novoTitulo = document.getElementById('novoTitulo').value;
+            const novoAutor = document.getElementById('novoAutor').value;
+            const novoAno = document.getElementById('novoAno').value;
+            const novaImagem = document.getElementById('novaImagem').value;
+
+            const response = await fetch(`${apiUrl}/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ titulo: novoTitulo, autor: novoAutor, ano_de_publicacao: parseInt(novoAno), imagem: novaImagem })
+            });
+
+            if (response.ok) {
+                listarLivros();
+                limparFormulario();
+            } else {
+                console.error('Erro ao atualizar livro');
+            }
+        }
+
+        function limparFormulario() {
+            document.getElementById('livroId').value = '';
+            document.getElementById('novoTitulo').value = '';
+            document.getElementById('novoAutor').value = '';
+            document.getElementById('novoAno').value = '';
+            document.getElementById('novaImagem').value = '';
+
+            document.querySelector('.atualizar-livro').style.display = 'none';
+        }
+
+        function fecharEdicao() {
+            limparFormulario();
+            document.querySelector('.atualizar-livro').style.display = 'none';
+        }
+
+        async function excluirLivro(id) {
+            const confirmacao = confirm("Tem certeza que deseja excluir este livro?");
+            if (!confirmacao) {
+                return;
+            }
+
+            const response = await fetch(`${apiUrl}/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                listarLivros();
+            } else {
+                console.error('Erro ao excluir livro');
+            }
+        }
+
+        window.onload = listarLivros;
+    </script>
+</body>
+</html>
