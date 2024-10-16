@@ -8,6 +8,10 @@ livros = [
     {'id': 3, 'titulo': 'Lugares Escuros', 'autor': 'Gillian Flynn', 'ano_de_publicacao': 2009, 'imagem': ''},
 ]
 
+@app.route('/')
+def index():
+    return send_from_directory('static', 'index.html')
+
 @app.route('/livros', methods=['GET'])
 def obter_livros():
     return jsonify(livros)
